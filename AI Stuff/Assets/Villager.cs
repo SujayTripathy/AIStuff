@@ -1,28 +1,46 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class Villager : MonoBehaviour
 {
 
     Vector3 dir;
     float initial;
+    float initialhouse;
     int point;
     int layermask;
+    int ground;
+    public GameObject house;
     [HideInInspector]
     public List<GameObject> points = new List<GameObject>(50);
     [SerializeField]
     float movement = 10;
     [SerializeField]
+    float checkdistance = 30;
+    [SerializeField]
     float speed = 5;
+    [SerializeField]
+    float sight = 20;
     float basespeed;
+    public Material dry;
+    public Material raincoat;
+    NavMeshAgent agent;
+    float housebuilding = 20;
+    public GameObject dirtTrail;
+    RaycastHit hitground;
 
+    
     
 
     // Start is called before the first frame update
     void Start()
     {
+        agent = GetComponent<NavMeshAgent>();
         initial = -movement;
+        initialhouse = -housebuilding;
+        ground = LayerMask.GetMask("Floor");
         layermask = LayerMask.GetMask("Roof");
         foreach(GameObject p in GameObject.FindGameObjectsWithTag("Roof"))
         {
@@ -40,33 +58,26 @@ public class Villager : MonoBehaviour
             {
                 initial = Time.time;
                 point = Random.Range(0, points.Count);
-                gameObject.transform.LookAt(points[point].transform);
-                dir = (points[point].transform.position - gameObject.transform.position).normalized;
-                //Debug.DrawLine(gameObject.transform.position, gameObject.transform.position + dir * 10, Color.red, Mathf.Infinity);
-            }
-            if ((gameObject.transform.position - points[point].transform.position).magnitude >= 1)
-            {
-                gameObject.transform.Translate(dir.normalized * Time.deltaTime * speed, Space.World);
-                Debug.DrawLine(gameObject.transform.position, gameObject.transform.position + dir * speed, Color.red, Mathf.Infinity);
+                agent.SetDestination(points[point].transform.position);
             }
             if (GameObject.FindGameObjectWithTag("Weather").GetComponent<Weather>().current == "Rain")
             {
                 RaycastHit hit;
                 if (Physics.Raycast(transform.position, transform.up,out hit,Mathf.Infinity,layermask))
                 {
-                    Debug.Log("I'm safe");
-                    speed = speed * .06f;
+                    agent.speed = speed * .06f;
+                    gameObject.GetComponent<MeshRenderer>().material = dry;
                 }
                 else
                 {
-                    Debug.Log("I'm getting wet");
+                    gameObject.GetComponent<MeshRenderer>().material = raincoat;
                     if (!points[point].GetComponent<PointInfo>().hasRoof)
                     {
                         foreach(GameObject p in points)
                         {
                             if (p.GetComponent<PointInfo>().hasRoof)
                             {
-                                dir = (p.transform.position - gameObject.transform.position).normalized;
+                                agent.destination = p.transform.position;
                             }
                         }
                     }
@@ -74,8 +85,32 @@ public class Villager : MonoBehaviour
             }
             else
             {
-                speed = basespeed;
-                Debug.Log("It's sunny");
+                agent.speed = basespeed;
+                gameObject.GetComponent<MeshRenderer>().material = dry;
+            }
+        }
+        ///Spawn Dirt Trail
+        if(Physics.Raycast(transform.position,-transform.up,out hitground, Mathf.Infinity, ground))
+        {
+            GameObject dirt = Instantiate(dirtTrail, hitground.point,new Quaternion());
+            dirt.transform.localEulerAngles = new Vector3(90, 0, 0);
+        }
+        
+    }
+    
+    private void OnTriggerStay(Collider other)
+    {
+        ///Check if there is space to build houses in area
+        if (other.transform.tag == "BuildingZone")
+        {
+            if (Time.time - initialhouse > housebuilding)
+            {
+                Collider[] houses = Physics.OverlapSphere(gameObject.transform.position, checkdistance, layermask);
+                if (houses.Length == 0)
+                {
+                    initialhouse = Time.time;
+                    Instantiate(house, transform.position, new Quaternion());
+                }
             }
         }
     }

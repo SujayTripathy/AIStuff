@@ -9,6 +9,7 @@ TagManager:
   - Roof
   - BuildingZone
   - Ground
+  - Tree
   layers:
   - Default
   - TransparentFX

@@ -22,7 +22,7 @@ public class Villager : MonoBehaviour
     [SerializeField]
     float speed = 5;
     [SerializeField]
-    float sight = 20;
+    float sight = 1;
     float basespeed;
     public Material dry;
     public Material raincoat;
@@ -30,6 +30,7 @@ public class Villager : MonoBehaviour
     float housebuilding = 20;
     public GameObject dirtTrail;
     RaycastHit hitground;
+    float woodcollected=0;
 
     
     
@@ -87,6 +88,15 @@ public class Villager : MonoBehaviour
             {
                 agent.speed = basespeed;
                 gameObject.GetComponent<MeshRenderer>().material = dry;
+            }
+        }
+        Collider[] trees= Physics.OverlapSphere(transform.position, sight);
+        foreach(Collider col in trees)
+        {
+            if (col.tag == "Tree")
+            {
+                Destroy(col.transform.gameObject);
+                woodcollected++;
             }
         }
         ///Spawn Dirt Trail
